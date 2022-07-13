@@ -1,6 +1,7 @@
 {
-    "dataset_root": "./data/shapenetlamps/lamps/03636649",
-    "splits_path": "./data/shapenetlamps/lamp_splits.json",
+    "dataset_root": "./data/shapenet/lamps/03636649",
+    "splits_path": "./data/shapenet/lamp_splits.json",
+    "dataset_source": "learnit",
 
     "max_freq": 8,
     "num_freqs": 20,
@@ -23,5 +24,5 @@
     "test_views": 25,
     "test_batchsize": 4096,
     "radius": 4.0,
-    "savedir": "./videos"
+    "savedir": "./lamps_videos"
 }

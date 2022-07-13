@@ -1,6 +1,7 @@
 {
-    "dataset_root": "./data/shapenetcars/cars/02958343",
-    "splits_path": "./data/shapenetcars/car_splits.json",
+    "dataset_root": "./data/shapenet/cars/02958343",
+    "splits_path": "./data/shapenet/car_splits.json",
+    "dataset_source": "learnit",
 
     "max_freq": 8,
     "num_freqs": 20,
@@ -23,5 +24,5 @@
     "test_views": 25,
     "test_batchsize": 4096,
     "radius": 4.0,
-    "savedir": "./videos"
+    "savedir": "./cars_videos"
 }

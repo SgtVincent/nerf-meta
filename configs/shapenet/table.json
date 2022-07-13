@@ -1,7 +1,7 @@
 {
-    "dataset_root": "./data/shapenet/chairs/03001627",
-    "splits_path": "./data/shapenet/chair_splits.json",
-    "dataset_source": "learnit",
+    "dataset_root": "./data/shapenet/table/04379243",
+    "splits_path": "./data/shapenet/table_splits.json",
+    "dataset_source": "render",
 
     "max_freq": 8,
     "num_freqs": 20,
@@ -24,5 +24,5 @@
     "test_views": 25,
     "test_batchsize": 4096,
     "radius": 4.0,
-    "savedir": "./chair_videos"
+    "savedir": "./table_videos"
 }

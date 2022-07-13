@@ -3,7 +3,7 @@ import json
 import imageio
 import torch
 from torch.utils.data import Dataset
-
+import numpy as np
 
 class ShapenetDataset(Dataset):
     """
@@ -63,8 +63,67 @@ class ShapenetDataset(Dataset):
     def __len__(self):
         return len(self.all_folders)
 
+class ShapenetRendered(Dataset):
+    """
+    returns the images, poses and instrinsics of a partiucular scene
+    """
+    def __init__(self, all_folders, num_views):
+        """
+        Args:
+            all_folders (list): list of folder paths. each folder contains indiviual scene info
+            num_views (int): number of views to return for each scene
+        """
+        super().__init__()
+        self.all_folders = all_folders
+        self.num_views = num_views
 
-def build_shapenet(image_set, dataset_root, splits_path, num_views):
+    def __getitem__(self, idx):
+        folderpath = self.all_folders[idx]
+        rgb_path = folderpath.joinpath("rgb")
+        pose_path = folderpath.joinpath("pose")
+        intrinsics_path = folderpath.joinpath("intrinsics.txt")
+        
+        with open(intrinsics_path, "r") as f:
+            lines = f.readlines()
+            # NOTE: since the nerf-meta also uses rendered shapenet as training data, 
+            # the camera center in rendering is set to (H/2, W/2), which seems to be 
+            # default setting of blender? In custom dataset, xc=yc=H/2=W/2
+            focal, xc, yc, _ = [float(i) for i in lines[0].strip().split()]
+        
+        all_imgs = []
+        all_poses = []
+        for frame_idx in range(self.num_views):
+            frame = str(frame_idx).zfill(6)
+            img_path = rgb_path.joinpath(f"{frame}.png")
+            img = imageio.imread(img_path)
+            all_imgs.append(torch.as_tensor(img, dtype=torch.float))
+            
+            extrinsics_path = pose_path.joinpath(f"{frame}.txt")
+            pose = np.loadtxt(extrinsics_path).reshape((4,4))
+            all_poses.append(torch.as_tensor(pose, dtype=torch.float))
+
+        all_imgs = torch.stack(all_imgs, dim=0) / 255.
+        # composite the images to a white background
+        all_imgs = all_imgs[...,:3] * all_imgs[...,-1:] + 1-all_imgs[...,-1:]
+
+        all_poses = torch.stack(all_poses, dim=0)
+
+        # all images of a scene has the same camera intrinsics
+        H, W = all_imgs[0].shape[:2]
+        hwf = torch.as_tensor([H, W, focal], dtype=torch.float)
+
+        # all shapenet scenes are bounded between 2. and 6.
+        near = 2.
+        far = 6.
+        bound = torch.as_tensor([near, far], dtype=torch.float)
+
+        return all_imgs, all_poses, hwf, bound
+    
+    def __len__(self):
+        return len(self.all_folders)
+
+
+def build_shapenet(image_set, dataset_root, splits_path, num_views, dataset_source="learnit"):
     """
     Args:
         image_set: specifies whether to return "train", "val" or "test" dataset
@@ -78,6 +137,12 @@ def build_shapenet(image_set, dataset_root, splits_path, num_views):
         splits = json.load(splits_file)
     
     all_folders = [root_path.joinpath(foldername) for foldername in sorted(splits[image_set])]
-    dataset = ShapenetDataset(all_folders, num_views)
+    if dataset_source == "learnit":
+        dataset = ShapenetDataset(all_folders, num_views)
+    elif dataset_source == "render":
+        dataset = ShapenetRendered(all_folders, num_views)
+    else:
+        print(f"dataset source {dataset_source} not supported")
+        raise NotImplementedError
 
     return dataset

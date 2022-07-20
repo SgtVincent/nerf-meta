@@ -2,6 +2,7 @@
     "dataset_root": "./data/shapenet/lamps/03636649",
     "splits_path": "./data/shapenet/lamp_splits.json",
     "dataset_source": "learnit",
+    "outdir":"./output/lamps",
 
     "max_freq": 8,
     "num_freqs": 20,

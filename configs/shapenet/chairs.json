@@ -2,6 +2,7 @@
     "dataset_root": "./data/shapenet/chairs/03001627",
     "splits_path": "./data/shapenet/chair_splits.json",
     "dataset_source": "learnit",
+    "outdir":"./output/chairs",
 
     "max_freq": 8,
     "num_freqs": 20,

@@ -2,12 +2,16 @@
     "dataset_root": "./data/shapenet/table/04379243",
     "splits_path": "./data/shapenet/table_splits.json",
     "dataset_source": "render",
+    "outdir":"./output/table",
 
     "max_freq": 8,
     "num_freqs": 20,
     "hidden_layers": 5,
     "hidden_features": 256,
+    "near": 0.0,
+    "far": 6.0,
 
+    "train_objects_max":5000,
     "train_views": 25,
     "meta_epochs": 15,
     "meta_lr": 5e-4,
@@ -23,6 +27,6 @@
 
     "test_views": 25,
     "test_batchsize": 4096,
-    "radius": 4.0,
+    "radius": 2.0,
     "savedir": "./table_videos"
 }

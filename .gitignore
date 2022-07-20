@@ -161,3 +161,9 @@ cython_debug/
 
 # dataset
 data/
+videos/
+slurm_output/
+slurm_scripts/
+videos/
+*.pth
+*.mp4

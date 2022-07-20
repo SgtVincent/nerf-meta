@@ -1,4 +1,6 @@
 from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
 import argparse
 import json
 import torch
@@ -9,6 +11,7 @@ from models.nerf import build_nerf
 from utils.shape_video import create_360_video
 from models.rendering import get_rays_shapenet, sample_points, volume_render
 
+DEBUG=False
 
 def test_time_optimize(args, model, optim, imgs, poses, hwf, bound):
     """
@@ -57,6 +60,19 @@ def report_result(args, model, imgs, poses, hwf, bound):
                                             white_bkgd=True)
                 synth.append(color_batch)
             synth = torch.cat(synth, dim=0).reshape_as(img)
+            if DEBUG:
+                # import numpy as np 
+                # import matplotlib.pyplot as plt
+                # img = all_imgs.cpu().numpy()[3,:,:,:] 
+                fig = plt.figure(figsize=(10,5))
+                fig.add_subplot(1,2,1)
+                vis_img = img.cpu().numpy()
+                plt.imshow(vis_img)
+                fig.add_subplot(1,2,2)
+                vis_synth = synth.detach().cpu().numpy()
+                plt.imshow(vis_synth)
+                plt.show()
+            
             error = F.mse_loss(img, synth)
             psnr = -10*torch.log10(error)
             view_psnrs.append(psnr)
@@ -80,10 +96,9 @@ def test():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    test_set = build_shapenet(image_set="test", dataset_root=args.dataset_root,
+    test_set = build_shapenet(args, image_set="test", dataset_root=args.dataset_root,
                             splits_path=args.splits_path,
-                            num_views=args.tto_views+args.test_views,
-                            dataset_source=args.dataset_source)
+                            num_views=args.tto_views+args.test_views)
     
     test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
 

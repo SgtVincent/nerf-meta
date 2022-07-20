@@ -1,3 +1,4 @@
+import os 
 import argparse
 import json
 import copy
@@ -131,14 +132,13 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_set = build_shapenet(image_set="train", dataset_root=args.dataset_root, splits_path=args.splits_path, 
-                               num_views=args.train_views, dataset_source=args.dataset_source)
+    train_set = build_shapenet(args, image_set="train", dataset_root=args.dataset_root, splits_path=args.splits_path, 
+                               num_views=args.train_views)
     train_loader = DataLoader(train_set, batch_size=1, shuffle=True)
 
-    val_set = build_shapenet(image_set="val", dataset_root=args.dataset_root,
+    val_set = build_shapenet(args, image_set="val", dataset_root=args.dataset_root,
                             splits_path=args.splits_path,
-                            num_views=args.tto_views+args.test_views,
-                            dataset_source=args.dataset_source)
+                            num_views=args.tto_views+args.test_views)
     
     val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
@@ -147,6 +147,9 @@ def main():
 
     meta_optim = torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
 
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
+        
     for epoch in range(1, args.meta_epochs+1):
         train_meta(args, meta_model, meta_optim, train_loader, device, epoch)
         val_psnr = val_meta(args, meta_model, val_loader, device)
@@ -156,7 +159,8 @@ def main():
             'epoch': epoch,
             'meta_model_state_dict': meta_model.state_dict(),
             'meta_optim_state_dict': meta_optim.state_dict(),
-            }, f'meta_epoch{epoch}.pth')
+            }, 
+            os.path.join(args.outdir, f'meta_epoch{epoch}.pth'))
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
     "dataset_root": "./data/shapenet/cars/02958343",
     "splits_path": "./data/shapenet/car_splits.json",
     "dataset_source": "learnit",
+    "cam_frame":"blender",
     "outdir":"./output/cars",
 
     "max_freq": 8,

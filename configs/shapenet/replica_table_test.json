@@ -1,14 +1,15 @@
 {
-    "dataset_root": "./data/shapenet/chairs/03001627",
-    "splits_path": "./data/shapenet/chair_splits.json",
-    "dataset_source": "learnit",
-    "cam_frame":"blender",
-    "outdir":"./output/chairs",
+    "dataset_root": "./data/shapenet/replica_table",
+    "splits_path": "./data/shapenet/replica_dummy_splits.json",
+    "dataset_source": "replica_test",
+    "cam_frame":"opencv",
 
     "max_freq": 8,
     "num_freqs": 20,
     "hidden_layers": 5,
     "hidden_features": 256,
+    "near": 0.0,
+    "far": 6.0,
 
     "train_views": 25,
     "meta_epochs": 15,
@@ -23,8 +24,8 @@
     "tto_batchsize": 64,
     "tto_steps": 1000,
 
-    "test_views": 25,
-    "test_batchsize": 4096,
-    "radius": 4.0,
-    "savedir": "./chair_videos"
+    "test_views": 6,
+    "test_batchsize": 1024,
+    "radius": 2.0,
+    "savedir": "./replica_test_output"
 }

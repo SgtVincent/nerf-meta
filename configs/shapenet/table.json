@@ -1,8 +1,9 @@
 {
     "dataset_root": "./data/shapenet/table/04379243",
     "splits_path": "./data/shapenet/table_splits.json",
-    "dataset_source": "render",
     "outdir":"./output/table",
+    "dataset_source": "render",
+    "cam_frame":"blender",
 
     "max_freq": 8,
     "num_freqs": 20,

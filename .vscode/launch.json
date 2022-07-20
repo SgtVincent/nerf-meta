@@ -5,7 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Train",
+            "name": "Train chairs",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/chairs.json"
+            ],
+            "env": {"PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000"}
+        },
+        {
+            "name": "Train table",
             "type": "python",
             "request": "launch",
             "program": "shapenet_train.py",
@@ -13,7 +25,78 @@
             "justMyCode": false,
             "args": [
                 "--config", "./configs/shapenet/table.json"
+            ],
+            "env": {"PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000"}
+        },
+        {
+            "name": "Test chairs",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_test.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/chairs.json",
+                "--weight-path", "meta_chairs_epoch_15.pth"
+                // "--weight-path", "table_meta_epoch15.pth",
+            ],
+            "env": {
+                "PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000",
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Test table",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_test.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/table.json",
+                "--weight-path", "table_meta_epoch14.pth",
+                // "--weight-path", "meta_chairs_epoch_15.pth"
+            ],
+            "env": {
+                "PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000",
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Test Replica table",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_test.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/replica_table_test.json",
+                "--weight-path", "table_meta_epoch14.pth"
             ]
-        }
+        },
+        {
+            "name": "Overfit chairs",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_overfit.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/chairs_overfit.json"
+            ],
+            "env": {"PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000"}
+        },
+        {
+            "name": "Overfit table",
+            "type": "python",
+            "request": "launch",
+            "program": "shapenet_overfit.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--config", "./configs/shapenet/table_overfit.json"
+            ],
+            "env": {"PYDEVD_UNBLOCK_THREADS_TIMEOUT":"1000"}
+        },
     ]
 }

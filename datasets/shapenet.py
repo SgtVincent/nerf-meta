@@ -75,8 +75,10 @@ class ShapenetRendered(Dataset):
             num_views (int): number of views to return for each scene
         """
         super().__init__()
+        
         self.all_folders = all_folders
         self.num_views = num_views
+        self.cam_frame = args.cam_frame
         self.near = args.near
         self.far = args.far
         
@@ -103,6 +105,19 @@ class ShapenetRendered(Dataset):
             
             extrinsics_path = pose_path.joinpath(f"{frame}.txt")
             pose = np.loadtxt(extrinsics_path).reshape((4,4))
+            # shapenet frame to z-axis upwards world frame
+            pose = np.array([[-1, 0, 0, 0],
+                            [0, 0, 1, 0],
+                            [0, 1, 0, 0],
+                            [0, 0, 0, 1]]) @ pose
+            # convert camera frame from opencv convention to blender convention
+            if self.cam_frame == "blender":
+                pose = pose @ np.array(
+                    [[1, 0,  0, 0],
+                    [0, -1, 0, 0],
+                    [0, 0, -1, 0],
+                    [0, 0,  0, 1]]
+                )
             all_poses.append(torch.as_tensor(pose, dtype=torch.float))
 
         all_imgs = torch.stack(all_imgs, dim=0) / 255.

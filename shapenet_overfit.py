@@ -1,4 +1,9 @@
+# learn single object in shapenet as a normal nerf training process
+# check if dataset is correct
+
+# TODO: test if table dataset can be overfit 
 from pathlib import Path
+import os
 from tqdm import tqdm 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +19,7 @@ from models.rendering import get_rays_shapenet, sample_points, volume_render
 
 DEBUG=False
 
-def test_time_optimize(args, model, optim, imgs, poses, hwf, bound):
+def overfit(args, model, optim, imgs, poses, hwf, bound):
     """
     test-time-optimize the meta trained model on available views
     """
@@ -24,7 +29,7 @@ def test_time_optimize(args, model, optim, imgs, poses, hwf, bound):
     rays_o, rays_d = rays_o.reshape(-1, 3), rays_d.reshape(-1, 3)
 
     num_rays = rays_d.shape[0]
-    for step in tqdm(range(args.tto_steps), desc="test time optimize:"):
+    for step in tqdm(range(args.tto_steps), desc="Overfit steps:"):
         indices = torch.randint(num_rays, size=[args.tto_batchsize])
         raybatch_o, raybatch_d = rays_o[indices], rays_d[indices]
         pixelbatch = pixels[indices] 
@@ -46,8 +51,7 @@ def report_result(args, model, imgs, poses, hwf, bound):
     ray_origins, ray_directions = get_rays_shapenet(hwf, poses)
 
     view_psnrs = []
-    for img, rays_o, rays_d in tqdm(zip(imgs, ray_origins, ray_directions), 
-                                    total=len(imgs), desc="report result:"):
+    for img, rays_o, rays_d in zip(imgs, ray_origins, ray_directions):
         rays_o, rays_d = rays_o.reshape(-1, 3), rays_d.reshape(-1, 3)
         t_vals, xyz = sample_points(rays_o, rays_d, bound[0], bound[1],
                                     args.num_samples, perturb=False)
@@ -62,18 +66,18 @@ def report_result(args, model, imgs, poses, hwf, bound):
                                             white_bkgd=True)
                 synth.append(color_batch)
             synth = torch.cat(synth, dim=0).reshape_as(img)
-            # if DEBUG:
-            #     # import numpy as np 
-            #     # import matplotlib.pyplot as plt
-            #     # img = all_imgs.cpu().numpy()[3,:,:,:] 
-            #     fig = plt.figure(figsize=(10,5))
-            #     fig.add_subplot(1,2,1)
-            #     vis_img = img.cpu().numpy()
-            #     plt.imshow(vis_img)
-            #     fig.add_subplot(1,2,2)
-            #     vis_synth = synth.detach().cpu().numpy()
-            #     plt.imshow(vis_synth)
-            #     plt.show()
+            if DEBUG:
+                # import numpy as np 
+                # import matplotlib.pyplot as plt
+                # img = all_imgs.cpu().numpy()[3,:,:,:] 
+                fig = plt.figure(figsize=(10,5))
+                fig.add_subplot(1,2,1)
+                vis_img = img.cpu().numpy()
+                plt.imshow(vis_img)
+                fig.add_subplot(1,2,2)
+                vis_synth = synth.detach().cpu().numpy()
+                plt.imshow(vis_synth)
+                plt.show()
             
             error = F.mse_loss(img, synth)
             psnr = -10*torch.log10(error)
@@ -83,12 +87,13 @@ def report_result(args, model, imgs, poses, hwf, bound):
     return scene_psnr
 
 
-def test():
-    parser = argparse.ArgumentParser(description='shapenet few-shot view synthesis')
+def train():
+    parser = argparse.ArgumentParser(description='shapenet train on one object')
     parser.add_argument('--config', type=str, required=True,
                     help='config file for the shape class (cars, chairs or lamps)')    
-    parser.add_argument('--weight-path', type=str, required=True,
-                        help='path to the meta-trained weight file')
+    # parser.add_argument('--weight-path', type=str, required=True,
+    #                     help='path to the meta-trained weight file')
+    parser.add_argument('--object_idx', type=int, default=0)
     args = parser.parse_args()
 
     with open(args.config) as config:
@@ -96,47 +101,42 @@ def test():
         for key, value in info.items():
             args.__dict__[key] = value
 
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    test_set = build_shapenet(args, image_set="test", dataset_root=args.dataset_root,
-                            splits_path=args.splits_path,
-                            num_views=args.tto_views+args.test_views)
+    train_set = build_shapenet(args, image_set="train", dataset_root=args.dataset_root, splits_path=args.splits_path, 
+                               num_views=args.train_views)
     
-    test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
-
+    train_loader = DataLoader(train_set, batch_size=1, shuffle=False)
+    
     model = build_nerf(args)
     model.to(device)
 
-    checkpoint = torch.load(args.weight_path, map_location=device)
-    meta_state = checkpoint['meta_model_state_dict']
-
     savedir = Path(args.savedir)
     savedir.mkdir(exist_ok=True)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
+    # for idx, (imgs, poses, hwf, bound) in enumerate(test_loader):
+    imgs, poses, hwf, bound = train_set[args.object_idx]
+    imgs, poses, hwf, bound = imgs.to(device), poses.to(device), hwf.to(device), bound.to(device)
+    imgs, poses, hwf, bound = imgs.squeeze(), poses.squeeze(), hwf.squeeze(), bound.squeeze()
+
+    optim = torch.optim.SGD(model.parameters(), args.tto_lr)
+
+    overfit(args, model, optim, imgs, poses, hwf, bound)
+    scene_psnr = report_result(args, model, imgs, poses, hwf, bound)
+    scene_id = str(train_set.all_folders[args.object_idx]).split("/")[-1]
+    create_360_video(args, model, hwf, bound, device, scene_id, savedir)
     
-    test_psnrs = []
-    for idx, (imgs, poses, hwf, bound) in enumerate(test_loader):
-        imgs, poses, hwf, bound = imgs.to(device), poses.to(device), hwf.to(device), bound.to(device)
-        imgs, poses, hwf, bound = imgs.squeeze(), poses.squeeze(), hwf.squeeze(), bound.squeeze()
-
-        tto_imgs, test_imgs = torch.split(imgs, [args.tto_views, args.test_views], dim=0)
-        tto_poses, test_poses = torch.split(poses, [args.tto_views, args.test_views], dim=0)
-
-        model.load_state_dict(meta_state)
-        optim = torch.optim.SGD(model.parameters(), args.tto_lr)
-
-        test_time_optimize(args, model, optim, tto_imgs, tto_poses, hwf, bound)
-        scene_psnr = report_result(args, model, test_imgs, test_poses, hwf, bound)
-
-        create_360_video(args, model, hwf, bound, device, idx+1, savedir)
-        
-        print(f"scene {idx+1}, psnr:{scene_psnr:.3f}, video created")
-        test_psnrs.append(scene_psnr)
+    print(f"scene {scene_id}, psnr:{scene_psnr:.3f}, video created")
+    object_class = args.dataset_root.split("/")[-2]
+    torch.save(
+        {
+            'train_step': args.tto_steps,
+            'meta_model_state_dict': model.state_dict(),
+            'meta_optim_state_dict': optim.state_dict(),
+        }, 
+        os.path.join(args.outdir, f'{object_class}_{scene_id}_{args.tto_steps}.pth')
+    )
     
-    test_psnrs = torch.stack(test_psnrs)
-    print("----------------------------------")
-    print(f"test dataset mean psnr: {test_psnrs.mean():.3f}")
-
-
 if __name__ == '__main__':
-    test()
+    train()

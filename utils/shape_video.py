@@ -1,10 +1,11 @@
 import math
+from tqdm import tqdm
 import imageio
 import torch
 from models.rendering import get_rays_shapenet, sample_points, volume_render
 
 
-def create_posemat(radius, theta, phi):
+def create_posemat(radius, theta, phi, cam_frame="blender"):
     """
     3d transformations to create pose matrix from radius, theta and phi
     """
@@ -36,19 +37,29 @@ def create_posemat(radius, theta, phi):
                             [0, 0, 0, 1]
                             ], dtype=torch.float) @ pose
     
+    if cam_frame == "opencv":
+        pose = pose @ torch.as_tensor(
+            [[1, 0,  0, 0],
+             [0, -1, 0, 0],
+             [0, 0, -1, 0],
+             [0, 0,  0, 1]], dtype=torch.float)
+    
     return pose
 
 
-def get_360_poses(radius=4, phi=math.pi/5, num_poses=120):
+def get_360_poses(radius=4, phi=-math.pi/5, num_poses=120, cam_frame="blender"):
     """
     create spherical camera poses for 360 view around the scene
+    cam_frame=="blender": x-right, y-up, z-out of screen
+    cam_frame=="opencv":  x-right, y-down, z-into screen
     """
+    assert(cam_frame in ["blender", "opencv"])
     radius = torch.as_tensor(radius, dtype=torch.float)
-    phi = torch.as_tensor(-phi, dtype=torch.float)
+    phi = torch.as_tensor(phi, dtype=torch.float)
 
     all_poses = []
     for theta in torch.linspace(0, 2*math.pi, num_poses+1)[:-1]:
-        all_poses.append(create_posemat(radius, theta, phi))
+        all_poses.append(create_posemat(radius, theta, phi, cam_frame))
     all_poses = torch.stack(all_poses, dim=0)
     
     return all_poses
@@ -59,10 +70,11 @@ def create_360_video(args, model, hwf, bound, device, scene_id, savedir):
     create 360 video of a specific shape
     """
     video_frames = []
-    poses_360 = get_360_poses(args.radius).to(device)
+    poses_360 = get_360_poses(
+        radius=args.radius, cam_frame=args.cam_frame).to(device)
     ray_origins, ray_directions = get_rays_shapenet(hwf, poses_360)
 
-    for rays_o, rays_d in zip(ray_origins, ray_directions):
+    for rays_o, rays_d in tqdm(zip(ray_origins, ray_directions), total=len(ray_origins), desc="create 360 video:"):
         rays_o, rays_d = rays_o.reshape(-1, 3), rays_d.reshape(-1, 3)
         t_vals, xyz = sample_points(rays_o, rays_d, bound[0], bound[1],
                                     args.num_samples, perturb=False)
